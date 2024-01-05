@@ -1,7 +1,5 @@
 import numpy as np
 from datasets import load_from_disk
-import os
-# os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 import copy
 import gc
 from datasets import load_dataset, load_from_disk
@@ -24,18 +22,15 @@ batch_num=128
 lr_t=7e-5 #
 lr_s=7e-5 # real stu
 lr_fast=7e-5 # fast stu
-epochs=200
+epochs=5
 Temp=5
 alpha=0.05 # softloss for all
 beta_1=0.05 # mseloss fast stu
 beta_2=0.05 # mseloss real stu
 sita=0.05 # retrain
-checkpoint="/hy-tmp/bert-base-uncased" # teacher checkpoint
-# checkpoint="/home/wangyukun/workspace/kd/bert-base-uncased" # teacher checkpoint
-ck_stu="/hy-tmp/layer6"
-# ck_stu="/home/wangyukun/workspace/kd/tinybert_model/layer6"
-ck_metric="/hy-tmp/metrics/glue"
-# ck_metric="/home/wangyukun/workspace/kd/metrics/glue"
+checkpoint="./workspace/pekd/bert-base-uncased" # teacher checkpoint
+ck_stu="./workspace/pekd/tinybert/layer6"
+ck_metric="./workspace/pekd/metrics/glue"
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print("device is :"+ device)
@@ -50,18 +45,14 @@ use_lora=True
 print("used lora:"+str(use_lora))
 
 if glue_task != "mnli":
-    # Path = f"/hy-tmp/checkpoint/best-student-model-{glue_task}.pt"
-    Path = f"./checkpoint/best-student-model-{glue_task}.pt"
+    # Path = f"./workspace/pekd/checkpoint/best-student-model-{glue_task}.pt"
+    Path = f"./workspace/pekd/checkpoint/best-student-model-{glue_task}.pt"
 elif glue_task=="mnli":
-    Path1= f"/hy-tmp/checkpoint/best-student-model-mnli-matched.pt"
-    Path2= f"/hy-tmp/checkpoint/best-student-model-mnli-mismatched.pt"
-    # Path1= f"./checkpoint/best-student-model-mnli-matched.pt"
-    # Path2= f"./checkpoint/best-student-model-mnli-mismatched.pt"
+    Path1= f"./workspace/pekd/checkpoint/best-student-model-mnli-matched.pt"
+    Path2= f"./workspace/pekd/checkpoint/best-student-model-mnli-mismatched.pt"
 
-# raw_datasets = load_dataset("glue", glue_task)
-raw_datasets=load_from_disk("/hy-tmp/mnli")
-# raw_datasets=load_from_disk(f"./glue/{glue_task}")
-# print(raw_datasets)
+
+raw_datasets=load_from_disk(f"./glue/{glue_task}")
 
 if glue_task=="sst2":
     label_num = 2
@@ -178,7 +169,6 @@ def mypkd(teacher_outputs,student_outputs):
     student_layers = student_all_hidden[0]  # start at 0 layer
     teacher_layers_len = len(teacher_all_hidden)  # 13
     student_layers_len = len(student_all_hidden)  # 7
-    # print("student's layers is "+ str(student_layers_len))
     ops=int((teacher_layers_len-1)/(student_layers_len-1))
     w=2
     count=1
@@ -196,12 +186,6 @@ def mypkd(teacher_outputs,student_outputs):
 
 def doMetatrain(teacher_model,student_model,train_dataloader,val_dataloader=None,val_dataloader_m=None,val_dataloader_mm=None):
     print("ready go!")
-    # t_total = len(train_dataloader) // epochs
-    # teacher_scheduler = get_linear_schedule_with_warmup(optimizer_teacher, num_warmup_steps=warmup_steps,
-    #                                                     num_training_steps=t_total)
-    # student_scheduler = get_linear_schedule_with_warmup(optimizer_student, num_warmup_steps=warmup_steps,
-    #                                                     num_training_steps=t_total)
-
     HardLoss = nn.CrossEntropyLoss()
     temp1 = 0.0
     temp2 = 0.0
@@ -216,13 +200,12 @@ def doMetatrain(teacher_model,student_model,train_dataloader,val_dataloader=None
             batch = {k: v.to(device) for k, v in batch.items()}
 
             # online fine-tun teacher
-            teacher_model.train()  # 开始训练前使用，会启用Batch Normalization 和 Dropout
-            teacher_model.cuda()  # 将模型从cpu转到gpu上
+            teacher_model.train()
+            teacher_model.cuda()
             teacher_outputs = teacher_model(**batch)
             loss1 = teacher_outputs.loss
-            loss1.backward()  # 反向传播
-            optimizer_teacher.step()  # 更新参数
-            # teacher_scheduler.step()
+            loss1.backward()
+            optimizer_teacher.step()
             optimizer_teacher.zero_grad()
             teacher_epoch_loss = loss1*0.5 + teacher_epoch_loss
 
@@ -246,7 +229,6 @@ def doMetatrain(teacher_model,student_model,train_dataloader,val_dataloader=None
             loss2 = (1 - alpha) * fast_hard_loss + alpha * fast_soft_loss + beta_1 * fast_mse_loss
             loss2.backward()
             optimizer_fast.step()
-            # fast_scheduler.step()
             optimizer_fast.zero_grad()
 
             # eval fast studnet
@@ -258,8 +240,8 @@ def doMetatrain(teacher_model,student_model,train_dataloader,val_dataloader=None
             retrain_teacher_outputs=teacher_model(**batch)
             retrain_mse_loss=mypkd(retrain_teacher_outputs,new_fast_outputs)
             loss_retrain = retrain_teacher_outputs.loss+sita*retrain_mse_loss
-            loss_retrain.backward()  # 反向传播
-            optimizer_teacher.step()  # 更新参数
+            loss_retrain.backward()
+            optimizer_teacher.step()
             # teacher_scheduler.step()
             optimizer_teacher.zero_grad()
             teacher_epoch_loss = loss_retrain*0.5 + teacher_epoch_loss
@@ -290,7 +272,6 @@ def doMetatrain(teacher_model,student_model,train_dataloader,val_dataloader=None
             loss3 = (1 - alpha) * hard_loss + alpha * soft_loss+ beta_2 *mse_loss
             loss3.backward()
             optimizer_student.step()
-            # student_scheduler.step()
             optimizer_student.zero_grad()
             student_epoch_loss = loss3 + student_epoch_loss
 
@@ -304,12 +285,12 @@ def doMetatrain(teacher_model,student_model,train_dataloader,val_dataloader=None
         print(f"epoch-{i}-student's-mseloss:{mse_loss}")
 
         # eval
-        # teacher_model.eval()  # 切换到测试模式（val和test)，关闭Batch Normalization 和 Dropout
+        # teacher_model.eval()
         student_model.eval()
         if glue_task != "mnli":
             for batch in tqdm(val_dataloader):
                 batch = {k: v.to(device) for k, v in batch.items()}
-                with torch.no_grad():  # with语句包裹起来的部分停止梯度的更新，从而节省了GPU算力和显存，但是并不会影响dropout和BN层的行为
+                with torch.no_grad():
                     outputs1 = teacher_model(**batch)
                     outputs2 = student_model(**batch)
                     logits1 = outputs1.logits
@@ -320,7 +301,6 @@ def doMetatrain(teacher_model,student_model,train_dataloader,val_dataloader=None
                     elif glue_task in ["stsb"]:
                         predictions1 = logits1.squeeze()
                         predictions2 = logits2.squeeze()
-                    # 由于dataloader是每次输出一个batch，因此我们要等着把所有batch都添加进来，再进行计算
                     teacher_metric.add_batch(predictions=predictions1, references=batch["labels"])
                     student_metric.add_batch(predictions=predictions2, references=batch["labels"])
 
@@ -366,14 +346,13 @@ def doMetatrain(teacher_model,student_model,train_dataloader,val_dataloader=None
         elif glue_task=="mnli":
             for batch in tqdm(val_dataloader_m):
                 batch = {k: v.to(device) for k, v in batch.items()}
-                with torch.no_grad():  # with语句包裹起来的部分停止梯度的更新，从而节省了GPU算力和显存，但是并不会影响dropout和BN层的行为
+                with torch.no_grad():
                     outputs1 = teacher_model(**batch)
                     outputs2 = student_model(**batch)
                     logits1 = outputs1[1]
                     logits2 = outputs2[1]
                     predictions1 = torch.argmax(logits1, dim=-1)
                     predictions2 = torch.argmax(logits2, dim=-1)
-                    # 由于dataloader是每次输出一个batch，因此我们要等着把所有batch都添加进来，再进行计算
                     teacher_metric.add_batch(predictions=predictions1, references=batch["labels"])
                     student_metric.add_batch(predictions=predictions2, references=batch["labels"])
 
@@ -384,14 +363,13 @@ def doMetatrain(teacher_model,student_model,train_dataloader,val_dataloader=None
 
             for batch in tqdm(val_dataloader_mm):
                 batch = {k: v.to(device) for k, v in batch.items()}
-                with torch.no_grad():  # with语句包裹起来的部分停止梯度的更新，从而节省了GPU算力和显存，但是并不会影响dropout和BN层的行为
+                with torch.no_grad():
                     outputs1 = teacher_model(**batch)
                     outputs2 = student_model(**batch)
                     logits1 = outputs1[1]
                     logits2 = outputs2[1]
                     predictions1 = torch.argmax(logits1, dim=-1)
                     predictions2 = torch.argmax(logits2, dim=-1)
-                    # 由于dataloader是每次输出一个batch，因此我们要等着把所有batch都添加进来，再进行计算
                     teacher_metric.add_batch(predictions=predictions1, references=batch["labels"])
                     student_metric.add_batch(predictions=predictions2, references=batch["labels"])
 
@@ -447,15 +425,10 @@ if __name__ == "__main__":
         teacher_model,student_model=addlora(teacher_model,student_model)
     else:
         pass
-    # if torch.cuda.device_count() > 1:
-    #     print("Let's use", torch.cuda.device_count(), "GPUs!")
-    #     teacher_model = nn.DataParallel(teacher_model)
-    #     student_model= nn.DataParallel(student_model)
     teacher_metric = evaluate.load(ck_metric,glue_task)
     student_metric = evaluate.load(ck_metric,glue_task)
     optimizer_teacher = AdamW(teacher_model.parameters(), lr=lr_t,no_deprecation_warning=True)
     optimizer_student= AdamW(student_model.parameters(), lr=lr_s,no_deprecation_warning=True)
-    # warmup_steps=0
     if glue_task !="mnli":
         train_dataloader, val_dataloader=makedata()
         doMetatrain(teacher_model=teacher_model,student_model=student_model,train_dataloader=train_dataloader,val_dataloader=val_dataloader,val_dataloader_m=None,val_dataloader_mm=None)
