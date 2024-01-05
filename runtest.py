@@ -21,11 +21,7 @@ print("task is :"+ glue_task)
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print("device is :"+ device)
 
-if glue_task not in ["ax","mnli_matched","mnli_mismatched"]:
-    model_name_or_path="./checkpoint/best-student-model-"+glue_task+".pt"
-else:
-    # model_name_or_path="./checkpoint/best-student-model-mnli-matched.pt"
-    model_name_or_path="/home/wangyukun/workspace/kd/tinybert_model/layer6"
+model_name_or_path="./checkpoint/best-student-model-"+glue_task+".pt"
 print("run model:"+model_name_or_path)
 checkpoint = model_name_or_path
 
@@ -43,7 +39,7 @@ print("eval batch size is:"+str(batchnum))
 
 maxlength=128
 
-raw_datasets = load_from_disk(f"/home/wangyukun/workspace/kd/glue/{glue_task}")
+raw_datasets = load_from_disk(f"./workspace/pekd/glue/{glue_task}")
 
 
 class AxProcessor(DataProcessor):
@@ -170,9 +166,6 @@ def test(model):
 
 
 if __name__ == "__main__":
-    if glue_task not in ["ax","mnli_matched","mnli_mismatched"]:
-        model =torch.load(checkpoint)
-    else:
-        model=BertForSequenceClassification.from_pretrained("/home/wangyukun/workspace/kd/tinybert_model/layer6",num_labels=3)
+    model =torch.load(checkpoint)
     model.to(device)
     test(model)
