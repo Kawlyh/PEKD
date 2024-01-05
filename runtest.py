@@ -1,8 +1,6 @@
 import os
 import warnings
-
 from datasets import load_dataset, load_from_disk
-# os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 import logging
 from transformers import DataCollatorWithPadding, BertForSequenceClassification, DataProcessor, InputExample
 from transformers import glue_processors as processors
@@ -45,12 +43,6 @@ print("eval batch size is:"+str(batchnum))
 
 maxlength=128
 
-# if glue_task=="sst-2":
-#     raw_datasets = load_dataset("glue", "sst2")
-# elif glue_task=="sts-b":
-#     raw_datasets = load_dataset("glue", "stsb")
-# else:
-#     raw_datasets = load_dataset("glue", glue_task)
 raw_datasets = load_from_disk(f"/home/wangyukun/workspace/kd/glue/{glue_task}")
 
 
@@ -92,7 +84,6 @@ class AxProcessor(DataProcessor):
         return examples
 
 def makedata():
-    # my_tokenizer =AutoTokenizer.from_pretrained("/home/wangyukun/workspace/kd/bert-base-uncased")
     my_tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
     def preprocess_function(examples):
         if glue_task in ["sst-2","cola"]:
