@@ -10,5 +10,5 @@ run run_pekd.py
 ## glue test
 run runtest.py
 ## the glue test score for our PEKD is:
-![test](test.jpg)
+![test](test.png)
 
