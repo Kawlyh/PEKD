@@ -140,10 +140,10 @@ def test(model):
         preds = np.squeeze(preds)
     if glue_task not in["ax","mnli_matched","mnli_mismatched"]:
         processor = processors[glue_task]()
-    elif glue_task == "mnli_matched":
-        processor = processors["mnli"]()
-    elif glue_task == "mnli_mismatched":
-        processor = processors["mnli-mm"]()
+    # elif glue_task == "mnli_matched":
+    #     processor = processors["mnli"]()
+    # elif glue_task == "mnli_mismatched":
+    #     processor = processors["mnli-mm"]()
     else:
         processors['ax'] = AxProcessor
         processor = processors[glue_task]()
