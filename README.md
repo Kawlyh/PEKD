@@ -1,5 +1,6 @@
 # PEKD
 this repository is for prameter efficient online distillation
+![pekd](method.png)
 ## instalition
 run download.py to download the glue datasets.<br>
 download "bert-base-uncased" checkpoint from huggingface <br>
