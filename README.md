@@ -12,10 +12,10 @@ download metric from huggingface
 ```
 python run_pekd.py
 ```
-## glue test
+## 📕 glue test
 ```
 python runtest.py
 ```
-## the glue test score for our PEKD is:
+## 📷 the glue test score for our PEKD is:
 ![test](test.png)
 
