@@ -1,14 +1,14 @@
-# PEKD
+# PEKD: Parameter-Efficient Online Knowledge Distillation for Pretrained Language Model
 this repository is for prameter efficient online distillation
 ![pekd](method.png)
-## installtion
+## 🔥 installtion
 ```
 run download.py to download the glue datasets.<br>
 download "bert-base-uncased" checkpoint from huggingface <br>
 download "tinybert" checkpoint from https://github.com/lxk00/BERT-EMD <br>
 download metric from huggingface
 ```
-## run pekd
+## 🚀 run pekd
 ```
 python run_pekd.py
 ```
